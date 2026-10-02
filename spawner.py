@@ -29,7 +29,7 @@ def spawn_creature(entity, name, pos, **kwargs):
     unit_type = cfg['unit_type']
     image = resize_image(cfg["path"], int(cfg['height']))
 
-    stats = build_stats(kwargs)
+    stats = build_stats(unit_type, kwargs)
 
     x = entity.clamp(x, 0, config.SURW - image.get_width())
     y = entity.clamp(y, 0, config.SURH - image.get_height())
@@ -47,6 +47,7 @@ def multi_spawn(entity, count, name, **kwargs):
         y = random.randint(0, config.SURH - candidate.get_image(False))
 
         candidate.pos.update(x, y)
+        candidate.spawn_pos = candidate.feet()
 
         if not any(
             candidate.get_rect().colliderect(enemy.get_rect()) for enemy in enemies

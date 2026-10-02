@@ -1,8 +1,9 @@
 import random
 import pygame
+import config
 from data.units import UNITS
 from spawner import spawn_creature
-from Enemy import Enemy
+from enemy import Enemy
 
 class DevConsole:
     def __init__(self):
@@ -12,6 +13,14 @@ class DevConsole:
         self.input = ''
 
         self.font = pygame.font.Font(None, 28)
+
+    @staticmethod
+    def command(name):
+        def decorator(func):
+            func.command_name = name
+            return func
+
+        return decorator
 
     def draw(self, screen):
         if not self.opened:
@@ -42,9 +51,6 @@ class DevConsole:
         else:
             self.input += event.unicode
 
-    def register(self, name, function):
-        self.commands[name] = function
-
     def execute(self, text):
         parts = text.split()
 
@@ -67,11 +73,63 @@ class DevConsole:
         self.opened = not self.opened
 
 class DevCommands:
-    def __init__(self, player, enemies, debug_render):
+    def __init__(self, player, enemies, debug_render, npc=None):
         self.player = player
         self.enemies = enemies
         self.debug = debug_render
+        self.npc = npc
 
+    def register_all(self, console):
+        for name in dir(self):
+            method = getattr(self, name)
+
+            command_name = getattr(
+                method, 'command_name', None
+            )
+
+            if command_name is not None:
+                console.commands[command_name] = method
+
+    def print_current_coordinates(self, trigger_phrase):
+        if trigger_phrase == 'player':
+            print(f"Player: {self.player.pos}")
+            return
+
+        if not self.enemies:
+            print("No enemies")
+            return
+
+        for i, enemy in enumerate(self.enemies):
+            commands = {
+                'sur': f"Slot [{i}]: {enemy.surround_slot}",
+                'enemy': f"Enemy [{i}]: {enemy.pos}"
+            }
+
+            result = commands.get(trigger_phrase)
+
+            if result is not None:
+                print(result)
+
+    def get_real_name(self, name):
+        names = {
+            'sword': 'goblin_swordman',
+            'archer': 'goblin_archer',
+        }
+        return names.get(name, name)
+
+    @DevConsole.command('targets')
+    def toggle_targets(self):
+        self.debug.show_targets = (
+            not self.debug.show_targets
+        )
+
+    @DevConsole.command('to_enemy')
+    def toggle_to_enemy(self):
+        self.debug.to_enemy = (
+            not self.debug.to_enemy
+        )
+
+    @DevConsole.command('spawn')
     def spawn(self, name, count=1):
         if name == 'priscilla':
             print('Cannot spawn player as enemy')
@@ -111,33 +169,52 @@ class DevCommands:
 
             self.enemies.append(enemy)
 
+    @DevConsole.command('debug')
     def toggle_debug(self):
         self.debug.enabled = not  self.debug.enabled
 
+    @DevConsole.command('tp')
     def teleport(self, x, y):
         x, y = int(x), int(y)
         self.player.pos.update(x, y)
 
-    def print_current_coordinates(self, trigger_phrase):
-        for enemy in self.enemies:
-            commands = {
-                'player': f"Player: {self.player.pos}",
-                'sur': f"Enemy surround point: {enemy.surround_slot}",
-                'enemy': f"Enemy: {enemy.pos}"
-            }
-
-            print(commands.get(trigger_phrase))
-
-    def get_real_name(self, name):
-        names = {
-            'sword': 'goblin_swordman',
-            'archer': 'goblin_archer',
-        }
-        return names.get(name, name)
-
+    @DevConsole.command('pos')
     def debug_print(self, target='player'):
         self.print_current_coordinates(target)
 
+    @DevConsole.command('killall')
+    def killall(self):
+        self.enemies.clear()
+        print("All enemies removed")
+
+    @DevConsole.command('ai')
+    def ai(self):
+        for i, enemy in enumerate(self.enemies):
+            print(
+                f"{i}: {enemy.unit_type} "
+                f"state={enemy.state} "
+                f"slot={enemy.surround_slot}"
+            )
+
+    @DevConsole.command('slots')
+    def slots(self):
+        for unit_type, count in config.SLOTS.items():
+            occupied = {
+                enemy.surround_slot
+                for enemy in self.enemies
+                if enemy.unit_type == unit_type
+                   and enemy.surround_slot is not None
+            }
+
+            free = set(range(count)) - occupied
+
+            print(
+                f"{unit_type}: "
+                f"occupied={sorted(occupied)}, "
+                f"free={sorted(free)}"
+            )
+
+    @DevConsole.command('run')
     def run_t(self, number=1, name='goblin_swordman'):
         real_name = self.get_real_name(name)
         self.teleport(500, 500)
@@ -145,3 +222,12 @@ class DevCommands:
         self.spawn(real_name , number)
         self.teleport(800, 800)
         self.debug_print('enemy')
+
+    @DevConsole.command('set_hp')
+    def set_hp(self, target, num):
+        num = max(0, int(num))
+        if target == 'player':
+            self.player.stats['current_health'] = num
+        else:
+            for enemy in self.enemies:
+                enemy.stats['current_health'] = num

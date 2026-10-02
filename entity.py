@@ -10,6 +10,8 @@ class Entity:
         self.stats = stats
         self.unit_type = unit_type
 
+        self.attack_timer = 0
+
         # Коэфициенты Хитбоксов
         self.hitbox_offset_x = 0.3
         self.hitbox_offset_y = 0.8
@@ -22,12 +24,12 @@ class Entity:
     def clamp(value, minimum, maximum):
         return max(minimum, min(value, maximum))
 
-    @staticmethod
-    def get_real_speed(stat_speed):
+    def get_real_speed(self):
+        stat_speed = int(self.get_stat_speed())
         return (stat_speed / config.SPEED_POINTS_PER_TILE) * config.TILE_SIZE
 
     def get_stat_speed(self):
-        return min(self.stats['speed'], self.stats['speed_limit'])
+        return int(min(self.stats['speed'], self.stats['speed_limit']))
 
     def get_image(self, horizontal=False):
         return self.image.get_width() if horizontal else self.image.get_height()
@@ -65,10 +67,29 @@ class Entity:
         raise ValueError("axis must be 'x' or 'y'")
 
     def can_move(self, candidate, obstacles):
-        return not any(
-            self.get_hitbox(candidate).colliderect(obstacle.get_hitbox())
-            for obstacle in obstacles
-        )
+        current = self.get_hitbox()
+        future = self.get_hitbox(candidate)
+
+        for obstacle in obstacles:
+            other = obstacle.get_hitbox()
+
+            if not future.colliderect(other):
+                continue
+
+            current_overlap = current.clip(other)
+            future_overlap = future.clip(other)
+
+            current_area = (
+                current_overlap.width * current_overlap.height
+            )
+            future_area = (
+                future_overlap.width * future_overlap.height
+            )
+
+            if future_area >= current_area:
+                return False
+
+        return True
 
     def move(
             self,
@@ -78,14 +99,16 @@ class Entity:
             obstacles=(),
             speed_multiplier=1
     ):
+        old_pos = self.pos.copy()
+
         if direction.length_squared() == 0:
-            return
+            return False
 
         direction = direction.normalize()  # нормализуем направление, чтобы диагональ не была быстрее
-        real_speed = self.get_real_speed(self.get_stat_speed()) * speed_multiplier
+        real_speed = self.get_real_speed() * speed_multiplier
 
         if real_speed == 0:
-            return
+            return False
 
         delta = direction * real_speed * dt  # насколько сдвинемся за этот кадр
 
@@ -111,6 +134,8 @@ class Entity:
         if self.can_move(candidate, obstacles):
             self.pos.y = new_y
 
+        return self.pos != old_pos
+
     def move_to(
             self,
             target_pos,
@@ -124,14 +149,20 @@ class Entity:
         distance = direction.length()
 
         if distance <= stop_distance:
-            return
+            return False
 
         remaining = distance - stop_distance
-        real_speed = self.get_real_speed(self.get_stat_speed()) * speed_multiplier
+        real_speed = self.get_real_speed() * speed_multiplier
 
         if real_speed == 0:
-            return
+            return False
 
         step_dt = min(dt, remaining / real_speed)
 
-        self.move(direction, step_dt, bounds, obstacles=obstacles, speed_multiplier=speed_multiplier)
+        return self.move(
+            direction,
+            step_dt,
+            bounds,
+            obstacles=obstacles,
+            speed_multiplier=speed_multiplier
+        )

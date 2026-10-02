@@ -1,6 +1,6 @@
 import config
 import pygame
-from Enemy import Enemy
+from enemy import Enemy
 from entity import Entity
 from debug import DebugRenderer
 from console import DevConsole, DevCommands
@@ -59,18 +59,14 @@ screen, world, world_rect, clock, camera_rect = setup_pygame()
 
 running = True
 
-priscilla = spawn_creature(Entity, 'priscilla', (0, 0), speed=50)
+priscilla = spawn_creature(Entity, 'priscilla', (0, 0))
 enemies = []
 
 db = DebugRenderer(screen)
 cmd = DevCommands(priscilla, enemies, db)
 dc = DevConsole()
 
-dc.register('spawn', cmd.spawn)
-dc.register('debug', cmd.toggle_debug)
-dc.register('tp', cmd.teleport)
-dc.register('current_pos', cmd.debug_print)
-dc.register('run', cmd.run_t)
+cmd.register_all(dc)
 
 start_time = None
 
@@ -105,6 +101,7 @@ while running:
 
     db.set_camera(camera_rect)
     db.mega_draw(priscilla, *enemies, line_from=priscilla, world=True)
+    db.draw_surround_targets(priscilla, enemies)
     dc.draw(screen)
 
     pygame.display.flip()

@@ -14,16 +14,28 @@ LIMITS = {
     'dodge_limit': 80,
     'accuracy_limit': 200,
     'speed_limit': 50,
+    'attack_speed_limit': 0.5,
 }
 STATE = {
     'current_health': 100,
 }
 
-def build_stats(custom_stats=None):
+ATTACK_RANGE = {
+    'melee': 1,
+    "range": 4,
+    "mage": 5,
+}
+
+def build_stats(unit_type, custom_stats=None):
     if custom_stats is None:
         custom_stats = {}
 
-    default_stats = {**BASE_STATS, **LIMITS, **STATE}
+    default_stats = {
+        **BASE_STATS,
+        **LIMITS,
+        **STATE,
+        'attack_range': ATTACK_RANGE[unit_type]
+    }
     stats = {**default_stats, **custom_stats}
 
     if 'max_health' in custom_stats and 'current_health' not in custom_stats:

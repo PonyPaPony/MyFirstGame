@@ -5,6 +5,8 @@ class DebugRenderer:
     def __init__(self, screen):
         self.screen = screen
         self.enabled = False
+        self.show_targets = False
+        self.to_enemy = False
         self.camera = pygame.Vector2(0, 0)
 
     def set_camera(self, camera_rect):
@@ -81,7 +83,7 @@ class DebugRenderer:
                 radius=5
             )
 
-            if line_from is not None:
+            if line_from is not None and self.to_enemy:
                 self.draw(
                     'line',
                     'white',
@@ -92,3 +94,44 @@ class DebugRenderer:
 
         if world:
             self.grid(config.TILE_SIZE)
+
+    def draw_surround_targets(self, player, enemies):
+        if not self.enabled or not self.show_targets:
+            return
+
+        for enemy in enemies:
+            if enemy.state != 'surround':
+                continue
+
+            if enemy.surround_slot is None:
+                continue
+
+            zone = config.ZONE.get(enemy.unit_type)
+
+            if zone is None:
+                continue
+
+            target = enemy.get_surround_point(
+                player,
+                enemy.surround_slot,
+                zone['x'],
+                zone['y']
+            )
+
+            start = self.world_to_screen(enemy.feet())
+            end = self.world_to_screen(target)
+
+            self.draw(
+                'line',
+                'orange',
+                start,
+                end,
+                width=2
+            )
+
+            self.draw(
+                'circle',
+                'cyan',
+                end,
+                radius=5
+            )
