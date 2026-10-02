@@ -88,3 +88,6 @@ def try_attack(attacker, defender):
         )
 
     return True
+
+def is_alive(unit):
+    return unit['current_health'] > 0

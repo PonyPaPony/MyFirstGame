@@ -45,7 +45,7 @@ DRAW = {
     'line': pygame.draw.line,
 }
 
-ARGO = {
+AGGRO = {
     'melee': 3 * TILE_SIZE,
     'range': 5 * TILE_SIZE,
     'mage': 5 * TILE_SIZE,

@@ -6,7 +6,6 @@ class Entity:
     def __init__(self, image, x, y, stats, unit_type):
         self.image = image
         self.pos = pygame.Vector2(x, y)
-        self.spawn_pos = self.pos.copy()
         self.stats = stats
         self.unit_type = unit_type
 
@@ -166,3 +165,7 @@ class Entity:
             obstacles=obstacles,
             speed_multiplier=speed_multiplier
         )
+
+    def update(self, dt):
+        if self.attack_timer > 0:
+            self.attack_timer = max(0, self.attack_timer - dt)

@@ -215,11 +215,10 @@ class DevCommands:
             )
 
     @DevConsole.command('run')
-    def run_t(self, number=1, name='goblin_swordman'):
-        real_name = self.get_real_name(name)
+    def run_t(self, number=1, name='sword'):
         self.teleport(500, 500)
         self.debug_print('player')
-        self.spawn(real_name , number)
+        self.spawn(name, number)
         self.teleport(800, 800)
         self.debug_print('enemy')
 
@@ -231,3 +230,9 @@ class DevCommands:
         else:
             for enemy in self.enemies:
                 enemy.stats['current_health'] = num
+
+    @DevConsole.command("status")
+    def status(self):
+        print(f"Player HP: {self.player.stats['current_health']}")
+        for enemy in self.enemies:
+            print(f"Enemy HP: {enemy.stats['current_health']}")

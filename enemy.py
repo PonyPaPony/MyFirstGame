@@ -23,7 +23,7 @@ class Enemy(Entity):
 
         self.unit = {
             'slots': config.SLOTS[unit_type],
-            'aggro': config.ARGO[unit_type],
+            'aggro': config.AGGRO[unit_type],
             'leash': config.LEASH[unit_type],
             'zone': config.ZONE[unit_type]
         }
@@ -103,6 +103,7 @@ class Enemy(Entity):
         home_distance = self.get_distance(self.spawn_pos)
         if home_distance <= 1:
             self.state = 'idle'
+            self.stats['current_health'] = self.stats['max_health']
             self.surround_slot = None
             self.is_charging = False
 
@@ -154,8 +155,7 @@ class Enemy(Entity):
         if self.aggro_cooldown > 0:
             self.aggro_cooldown = max(0, self.aggro_cooldown - dt)
 
-        if self.attack_timer > 0:
-            self.attack_timer = max(0, self.attack_timer - dt)
+        self.update(dt)
 
         harry_potter = self.states[self.state]
         harry_potter(target, distance, dt, bounds, obstacles, enemies)
