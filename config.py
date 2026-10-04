@@ -76,3 +76,21 @@ SLOTS = {
 }
 
 AGGRO_COOLDOWN = 15
+COMBAT_EXIT_DELAY = 3
+
+HITBOX_SETTINGS = {
+    'offset_x': 0.3,
+    'offset_y': 0.8,
+    'width': 0.4,
+    'height': 0.2,
+}
+
+MARGINS = {
+    'active': 0.2,
+    'despawn': 0.3
+}
+
+RESPAWN_TIME = {
+    'local': 180,
+    'global': 1440
+}

@@ -1,5 +1,7 @@
 import pygame
 import config
+from debug import DebugRenderer
+from console import DevConsole, DevCommands
 
 
 class Foo: # temporary name
@@ -69,3 +71,44 @@ class Foo: # temporary name
                 dx += mx
                 dy += my
         return dx, dy
+
+    @staticmethod
+    def units_draw(*args, place):
+        for arg in args:
+            arg.draw(place)
+
+    @staticmethod
+    def dev_utils(*args, screen, world_time):
+        debug = DebugRenderer(screen)
+        cmd = DevCommands(*args, world_time=world_time, debug_render=debug)
+        console = DevConsole()
+
+        return debug, cmd, console
+
+class WorldTime:
+    def __init__(self):
+        self.total_minutes = 0
+
+    def update(self, dt):
+        self.total_minutes += dt
+
+    def get_calendar_day(self):
+        days = self.get_day()
+
+        year = days // 360
+        month = (days % 360) // 30
+        day = days % 30
+
+        return year, month, day
+
+    def get_day(self):
+        return int(self.total_minutes // 1440)
+
+    def get_hour(self):
+        return int(self.total_minutes // 60) % 24
+
+    def get_minute(self):
+        return int(self.total_minutes) % 60
+
+    def set_time(self, minutes):
+        self.total_minutes = minutes

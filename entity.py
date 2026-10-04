@@ -12,10 +12,10 @@ class Entity:
         self.attack_timer = 0
 
         # Коэфициенты Хитбоксов
-        self.hitbox_offset_x = 0.3
-        self.hitbox_offset_y = 0.8
-        self.hitbox_width = 0.4
-        self.hitbox_height = 0.2
+        self.hitbox_offset_x = config.HITBOX_SETTINGS['offset_x']
+        self.hitbox_offset_y = config.HITBOX_SETTINGS['offset_y']
+        self.hitbox_width = config.HITBOX_SETTINGS['width']
+        self.hitbox_height = config.HITBOX_SETTINGS['height']
 
         self.spawn_pos = self.feet()
 

@@ -1,7 +1,7 @@
 import random
 import pygame
 import config
-from data.units import UNITS
+from data.unit_templates import UNITS
 from spawner import spawn_creature
 from enemy import Enemy
 
@@ -73,11 +73,12 @@ class DevConsole:
         self.opened = not self.opened
 
 class DevCommands:
-    def __init__(self, player, enemies, debug_render, npc=None):
+    def __init__(self, player, enemies, npc=None, world_time=None, debug_render=None):
         self.player = player
         self.enemies = enemies
-        self.debug = debug_render
         self.npc = npc
+        self.world_time = world_time
+        self.debug = debug_render
 
     def register_all(self, console):
         for name in dir(self):
@@ -236,3 +237,19 @@ class DevCommands:
         print(f"Player HP: {self.player.stats['current_health']}")
         for enemy in self.enemies:
             print(f"Enemy HP: {enemy.stats['current_health']}")
+
+    @DevConsole.command("time")
+    def time(self, set_time=False):
+        if not set_time:
+            print(
+                "day", self.world_time.get_day(),
+                "hour", self.world_time.get_hour(),
+                "minute", self.world_time.get_minute()
+            )
+        else:
+            self.world_time.set_time(int(set_time))
+            print(
+                "day", self.world_time.get_day(),
+                "hour", self.world_time.get_hour(),
+                "minute", self.world_time.get_minute()
+            )

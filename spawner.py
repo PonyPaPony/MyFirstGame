@@ -1,7 +1,7 @@
 import random
 import pygame
 import config
-from data.units import UNITS
+from data.unit_templates import UNITS
 from stats import build_stats
 
 
