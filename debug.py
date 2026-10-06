@@ -135,3 +135,13 @@ class DebugRenderer:
                 end,
                 radius=5
             )
+
+    def draw_buildings(self, objects, color='red', arg='polygon'):
+        for obj in objects:
+            func = obj.get_polygon if arg == 'polygon' else obj.get_threshold
+            self.draw(
+                'polygon',
+                color,
+                func(),
+                width=2
+            )

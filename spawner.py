@@ -25,9 +25,9 @@ def resize_image(path, target_height:int=96): # 96px средний рост
 
 def spawn_creature(entity, name, pos, **kwargs):
     x, y = pos
-    cfg = UNITS[name]
-    unit_type = cfg['unit_type']
-    image = resize_image(cfg["path"], int(cfg['height']))
+    configure = UNITS[name]
+    unit_type = configure['unit_type']
+    image = resize_image(configure["path"], int(configure['height']))
 
     stats = build_stats(unit_type, kwargs)
 

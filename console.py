@@ -253,3 +253,7 @@ class DevCommands:
                 "hour", self.world_time.get_hour(),
                 "minute", self.world_time.get_minute()
             )
+
+    @DevConsole.command('quit')
+    def quit(self):
+        pygame.quit()

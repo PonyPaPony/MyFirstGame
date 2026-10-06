@@ -43,6 +43,7 @@ DRAW = {
     'rect': pygame.draw.rect,
     'circle': pygame.draw.circle,
     'line': pygame.draw.line,
+    'polygon': pygame.draw.polygon,
 }
 
 AGGRO = {
@@ -79,11 +80,18 @@ AGGRO_COOLDOWN = 15
 COMBAT_EXIT_DELAY = 3
 
 HITBOX_SETTINGS = {
-    'offset_x': 0.3,
-    'offset_y': 0.8,
-    'width': 0.4,
-    'height': 0.2,
-}
+        'offset_x': 0.3,
+        'offset_y': 0.8,
+        'width': 0.4,
+        'height': 0.2,
+    }
+
+HITBOX_DEV = {
+    'offset_x': 0.5,
+    'offset_y': 0.5,
+    'width': 1,
+    'height': 1
+    }
 
 MARGINS = {
     'active': 0.2,

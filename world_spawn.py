@@ -1,6 +1,9 @@
 import config
 from spawner import spawn_creature
 from combat import is_alive
+from locations import Location
+from data.location_templates import LOCATIONS
+from buildings import Building
 
 class WorldSpawn:
     def __init__(self, units):
@@ -19,6 +22,18 @@ class WorldSpawn:
         margin_y = round(camera.height * target)
 
         return margin_x, margin_y
+
+    @staticmethod
+    def load_location(name):
+        l = Location(name)
+        return l.image, l.position
+
+    @staticmethod
+    def load_building(name):
+        return Building(name)
+
+    def get_objects(self, loc):
+        return [self.load_building(name) for name in LOCATIONS[loc]['buildings']]
 
     def spawn_player(self, entity_class, player_name, player_pos, **kwargs):
         player = spawn_creature(entity_class, player_name, player_pos, **kwargs)

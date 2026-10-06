@@ -13,10 +13,10 @@ class Foo: # temporary name
 
         return screen, *screen.get_size()
 
-    def setup_pygame(self):
+    def setup_pygame(self, size='Window'):
         pygame.init()
 
-        screen, w, h = self.create_screen('Window')
+        screen, w, h = self.create_screen(size)
         world = pygame.Surface((config.SURW, config.SURH))
         world_rect = world.get_rect()
         pygame.display.set_caption(config.GAME_NAME)
@@ -29,23 +29,27 @@ class Foo: # temporary name
     def get_events(self):
         return pygame.event.get()
 
-    def handle_events(self, dc, events):
+    def handle_events(self, console, events):
+        interact = False
         for event in events:
 
             if event.type == pygame.QUIT:
-                return False
+                return False, interact
 
             if event.type != pygame.KEYDOWN:
                 continue
 
             if event.key == pygame.K_BACKQUOTE:
-                dc.toggle()
+                console.toggle()
                 continue
 
-            if dc.opened:
-                dc.handle_event(event)
+            if event.key == pygame.K_e:
+                interact = True
 
-        return True
+            if console.opened:
+                console.handle_event(event)
+
+        return True, interact
 
     def player_mouse(self, events):
         for event in events:

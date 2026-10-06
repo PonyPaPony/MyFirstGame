@@ -1,19 +1,38 @@
 import config
 from entity import Entity
 from combat import try_attack
+from buildings import Building
 
 class Player(Entity):
     def __init__(self, image, x, y, stats, unit_type):
         super().__init__(image, x, y, stats, unit_type)
 
         self.in_combat = False
+        self.interaction_target = None
         self.combat_exit_timer = 0
 
-    def update_player(self, direction, dt, mouse_pos, world_rect, enemies):
+    def update_player(self, direction, dt, mouse_pos, world_rect, enemies, obstacles):
         self.update(dt)
         self.attack(mouse_pos, enemies)
-        self.move(direction, dt, world_rect, obstacles=enemies)
+        self.move(direction, dt, world_rect, obstacles=obstacles)
         self.update_player_combat_time(dt, enemies)
+        self.object_filter(obstacles)
+
+    def object_filter(self, objects):
+        buildings = []
+        for obj in objects:
+            if isinstance(obj, Building):
+                buildings.append(obj)
+        self.can_interact_with_build(buildings)
+
+
+    def can_interact_with_build(self, buildings):
+        for build in buildings:
+            if build.player_at_threshold(self):
+                self.interaction_target = build
+                return
+        self.interaction_target = None
+
 
     def get_target(self, mouse_pos, targets):
         if mouse_pos is None:

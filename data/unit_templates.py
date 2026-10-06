@@ -13,5 +13,10 @@ UNITS = {
         'path': "Images/Enemies/Goblin_Archer.png",
         'height': 64,
         'unit_type': 'range'
+    },
+    'oliver': {
+        'path': "Images/Models/Oliver.png",
+        'height': 96,
+        'unit_type': 'melee'
     }
 }

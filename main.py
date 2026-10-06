@@ -17,16 +17,14 @@ world_spawn = WorldSpawn(units)
 screen, world, world_rect, clock, camera_rect = foo.setup_pygame()
 
 running = True
+interact = False
 camp = world_rules.add_camp()
 
-world_spawn.spawn_player(Player, 'priscilla', (0, 0), max_health=10000, speed=50) # need add default
+world_spawn.spawn_player(Player, 'priscilla', (773, 260), max_health=10000, speed=50) # need add default
 
-gobs = [
-    world_spawn.add_record(Enemy, 'goblin_swordman', (500, 500), 'enemies', max_health=1),
-    world_spawn.add_record(Enemy, 'goblin_archer', (700, 500), 'enemies', max_health=1)
-]  # temporary is here, then remove
 
-camp.add_record(*gobs)  # that also
+img, pos = world_spawn.load_location('start_city') # temporary is here, then remove
+objects = world_spawn.get_objects('start_city')
 
 debug, cmd, console = foo.dev_utils(units.player, units.enemies, screen=screen, world_time=world_time)
 
@@ -34,22 +32,37 @@ cmd.register_all(console)
 
 while running:
     events = foo.get_events()
-    running = foo.handle_events(console, events)
+    running, interact = foo.handle_events(console, events)
 
     dt = clock.tick(config.FPS) / 1000
     world_time.update(dt)
 
     world.fill(config.BACKGROUND_COLOR)
+    world.blit(img, pos)
 
     keys = pygame.key.get_pressed()
     mouse_pos = foo.world_mouse(events, camera_rect)
+    if mouse_pos is not None:
+        print((round(mouse_pos.x), round(mouse_pos.y)),',')
 
     if not console.opened:
+        player_obstacles = units.enemies + objects
         dx, dy = foo.handle_move(keys)
-        units.player.update_player(pygame.Vector2(dx, dy), dt, mouse_pos, world_rect, units.enemies)
+        units.player.update_player(
+            pygame.Vector2(dx, dy),
+            dt,
+            mouse_pos,
+            world_rect,
+            units.enemies,
+            player_obstacles
+        )
+
+        if interact and units.player.interaction_target:
+            print("INTERACT WITH:", units.player.interaction_target.name)
 
         for enemy in units.enemies:
-            obstacles = [units.player] + [unit for unit in units.enemies if unit is not enemy]
+            obstacles = [units.player] + [
+                unit for unit in units.enemies if unit is not enemy] + objects
             enemy.update_ai(units.player, dt, world_rect, obstacles=obstacles, enemies=units.enemies)
 
     foo.units_draw(*units.get_all(), place=world)
@@ -65,6 +78,8 @@ while running:
     debug.set_camera(camera_rect)
     debug.mega_draw(units.player, *units.enemies, line_from=units.player, world=True)
     debug.draw_surround_targets(units.player, units.enemies)
+    debug.draw_buildings(objects)
+    debug.draw_buildings(objects, color='green', arg='threshold')
     console.draw(screen)
 
     pygame.display.flip()

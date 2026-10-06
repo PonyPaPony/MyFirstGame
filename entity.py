@@ -39,6 +39,9 @@ class Entity:
     def get_rect(self): # КВАДРАТ, КВАДРАТ, КВАДРАТ, (это рофл я знаю это прямоугольник)
         return self.image.get_rect(topleft=self.pos)
 
+    def collides_with(self, rect):
+        return rect.colliderect(self.get_hitbox())
+
     def get_hitbox(self, pos=None): # Ну это то на что ты в CSочке жалуешься
         if pos is None:
             pos = self.pos
@@ -70,22 +73,25 @@ class Entity:
         future = self.get_hitbox(candidate)
 
         for obstacle in obstacles:
-            other = obstacle.get_hitbox()
-
-            if not future.colliderect(other):
+            if not obstacle.collides_with(future):
                 continue
 
-            current_overlap = current.clip(other)
-            future_overlap = future.clip(other)
+            if isinstance(obstacle, Entity):
+                other = obstacle.get_hitbox()
 
-            current_area = (
-                current_overlap.width * current_overlap.height
-            )
-            future_area = (
-                future_overlap.width * future_overlap.height
-            )
+                current_overlap = current.clip(other)
+                future_overlap = future.clip(other)
 
-            if future_area >= current_area:
+                current_area = (
+                    current_overlap.width * current_overlap.height
+                )
+                future_area = (
+                    future_overlap.width * future_overlap.height
+                )
+
+                if future_area >= current_area:
+                    return False
+            else:
                 return False
 
         return True
