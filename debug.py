@@ -7,16 +7,20 @@ class DebugRenderer:
         self.enabled = False
         self.show_targets = False
         self.to_enemy = False
+        self.scale = 1
+        self.offset = pygame.Vector2(0, 0)
         self.camera = pygame.Vector2(0, 0)
+        self.render_size = pygame.Vector2(0, 0)
 
-    def set_camera(self, camera_rect):
-        self.camera.update(
-            camera_rect.x,
-            camera_rect.y
-        )
+    def set_camera(self, camera_rect, scale=1, offset=(0, 0), render_size=(0, 0)):
+        self.camera.update(camera_rect.x, camera_rect.y)
+        self.scale = scale
+        self.offset.update(offset)
+        self.render_size.update(render_size)
 
     def world_to_screen(self, pos):
-        return pygame.Vector2(pos) - self.camera
+        pos = pygame.Vector2(pos) - self.camera
+        return pos * self.scale + self.offset
 
     def draw(self, key, color, *args, **kwargs):
         if not self.enabled:
@@ -26,42 +30,52 @@ class DebugRenderer:
         return draw_func(self.screen, color, *args, **kwargs)
 
     def hitbox(self, subject):
-        rect = subject.get_hitbox().copy()
+        world_rect = subject.get_hitbox()
 
-        rect.x -= round(self.camera.x)
-        rect.y -= round(self.camera.y)
+        pos = self.world_to_screen(world_rect.topleft)
 
-        return rect
+        return pygame.Rect(
+            round(pos.x),
+            round(pos.y),
+            round(world_rect.width * self.scale),
+            round(world_rect.height * self.scale)
+        )
 
     def center(self, subject):
         return self.hitbox(subject).center
 
     def grid(self, tile_size, color='gray', width=1):
-        screen_width = self.screen.get_width()
-        screen_height = self.screen.get_height()
+        tile = tile_size * self.scale
 
-        offset_x = -int(self.camera.x) % tile_size
-        offset_y = -int(self.camera.y) % tile_size
+        left = self.offset.x
+        top = self.offset.y
+        right = left + self.render_size.x
+        bottom = top + self.render_size.y
 
-        # вертикальные линии
-        for x in range(offset_x, screen_width, tile_size):
+        offset_x = (-self.camera.x * self.scale) % tile
+        offset_y = (-self.camera.y * self.scale) % tile
+
+        x = left + offset_x
+        while x <= right:
             self.draw(
                 'line',
                 color,
-                (x, 0),
-                (x, screen_height),
+                (x, top),
+                (x, bottom),
                 width=width
             )
+            x += tile
 
-        # горизонтальные линии
-        for y in range(offset_y, screen_height, tile_size):
+        y = top + offset_y
+        while y <= bottom:
             self.draw(
                 'line',
                 color,
-                (0, y),
-                (screen_width, y),
+                (left, y),
+                (right, y),
                 width=width
             )
+            y += tile
 
     def mega_draw(self, *units, line_from=None, world=False):
         for index, unit in enumerate(units):
@@ -138,10 +152,18 @@ class DebugRenderer:
 
     def draw_buildings(self, objects, color='red', arg='polygon'):
         for obj in objects:
+            if arg == 'threshold' and obj.is_interior_obstacle:
+                continue
+
+            points = []
             func = obj.get_polygon if arg == 'polygon' else obj.get_threshold
+
+            for point in func():
+                points.append(self.world_to_screen(point))
+
             self.draw(
                 'polygon',
                 color,
-                func(),
+                points,
                 width=2
             )

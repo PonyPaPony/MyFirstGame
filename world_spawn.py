@@ -2,7 +2,7 @@ import config
 from spawner import spawn_creature
 from combat import is_alive
 from locations import Location
-from data.location_templates import LOCATIONS
+from data.location_templates import LOCATIONS, BUILDINGS
 from buildings import Building
 
 class WorldSpawn:
@@ -29,11 +29,30 @@ class WorldSpawn:
         return l.image, l.position
 
     @staticmethod
-    def load_building(name):
-        return Building(name)
+    def load_building(name, to_loc=False):
+        build = Building(name)
+        if to_loc:
+            return build.image, build.position, build.player_pos
+        return build
+
+    def load_space(self, target):
+        if isinstance(target, Location):
+            image, position, player_pos = self.load_location(target.id)
+            objects = self.get_objects(target.id)
+            return image, position, objects, player_pos
+
+        elif isinstance(target, Building):
+            image, position, player_pos = self.load_building(target.id, to_loc=True)
+            objects = self.get_interior(target)
+            return image, position, objects, player_pos
+
+        return None
 
     def get_objects(self, loc):
         return [self.load_building(name) for name in LOCATIONS[loc]['buildings']]
+
+    def get_interior(self, target):
+        return [Building(target.id, polygon=points) for points in target.data['geometry']['interior_collision']]
 
     def spawn_player(self, entity_class, player_name, player_pos, **kwargs):
         player = spawn_creature(entity_class, player_name, player_pos, **kwargs)

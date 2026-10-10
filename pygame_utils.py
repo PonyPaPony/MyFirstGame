@@ -5,26 +5,78 @@ from console import DevConsole, DevCommands
 
 
 class Foo: # temporary name
+    def __init__(self):
+        self.render_camera = None
+        self.render_scale = 1
+        self.render_offset = pygame.Vector2(0, 0)
+
+
     def create_screen(self, mode):
         width, height = config.SCREEN_SETTINGS[mode]['size']
         method = config.SCREEN_SETTINGS[mode]['method']
 
         screen = pygame.display.set_mode((width, height), method)
 
-        return screen, *screen.get_size()
+        return screen
 
     def setup_pygame(self, size='Window'):
         pygame.init()
 
-        screen, w, h = self.create_screen(size)
+        screen = self.create_screen(size)
         world = pygame.Surface((config.SURW, config.SURH))
-        world_rect = world.get_rect()
         pygame.display.set_caption(config.GAME_NAME)
         clock = pygame.time.Clock()
-        camera = [0, 0, w, h]
+        camera = [0, 0, config.CAMERA_W, config.CAMERA_H]
         camera_rect = pygame.Rect(camera)
 
-        return screen, world,  world_rect, clock, camera_rect
+        return screen, world, clock, camera_rect
+
+    def render(self, screen, world, camera_rect, world_rect):
+        render_camera = camera_rect.copy()
+
+        render_camera.width = min(render_camera.width, world_rect.width)
+        render_camera.height = min(render_camera.height, world_rect.height)
+
+        render_camera.clamp_ip(world_rect)
+
+        frame = world.subsurface(render_camera)
+
+        screen_w, screen_h = screen.get_size()
+        frame_w, frame_h = frame.get_size()
+
+        scale = min(
+            screen_w / frame_w,
+            screen_h / frame_h
+        )
+
+        render_w = int(frame_w * scale)
+        render_h = int(frame_h * scale)
+
+        frame = pygame.transform.scale(
+            frame,
+            (render_w, render_h)
+        )
+
+        x = (screen_w - render_w) // 2
+        y = (screen_h - render_h) // 2
+
+        screen.fill(config.BACKGROUND_COLOR)
+        screen.blit(frame, (x, y))
+
+        self.render_camera = render_camera.copy()
+        self.render_scale = scale
+        self.render_offset.update(x, y)
+
+        return (
+            render_camera,
+            scale,
+            (x, y),
+            (render_w, render_h)
+        )
+
+    @staticmethod
+    def current_rect(image, pos):
+        return image.get_rect(topleft=pos)
 
     def get_events(self):
         return pygame.event.get()
@@ -38,6 +90,9 @@ class Foo: # temporary name
 
             if event.type != pygame.KEYDOWN:
                 continue
+
+            if event.key == pygame.K_ESCAPE:
+                return False, interact
 
             if event.key == pygame.K_BACKQUOTE:
                 console.toggle()
@@ -60,13 +115,19 @@ class Foo: # temporary name
                     return None
         return None
 
-    def world_mouse(self, events, camera_rect):
+    def world_mouse(self, events):
         mouse = self.player_mouse(events)
 
         if mouse is None:
             return None
 
-        return mouse + camera_rect.topleft
+        if self.render_camera is None:
+            return None
+
+        return (
+                (mouse - self.render_offset) / self.render_scale
+                + pygame.Vector2(self.render_camera.topleft)
+        )
 
     def handle_move(self, keys):
         dx, dy = 0, 0

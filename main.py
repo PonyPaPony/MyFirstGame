@@ -1,34 +1,33 @@
 import config
 import pygame
-from enemy import Enemy
-from player import Player
 from units import Units
+from core import Core
 from world_spawn import WorldSpawn
 from world_rules import WorldRules
 from pygame_utils import Foo, WorldTime
 
 
 foo = Foo() # maybe Core be good name for this
+core = Core()
 world_time = WorldTime()
 world_rules = WorldRules(world_time)
 units = Units()
 world_spawn = WorldSpawn(units)
 
-screen, world, world_rect, clock, camera_rect = foo.setup_pygame()
+screen, world, clock, camera_rect = foo.setup_pygame("Border")
+
+core.init_units(world_spawn)
+core.register_units(units)
+camp = core.connect(world_rules)
+img, pos, objects = core.update(world_spawn)
+world_rect = foo.current_rect(img, pos)
+debug, cmd, console = foo.dev_utils(units.player, units.enemies, screen=screen, world_time=world_time)
+cmd.register_all(console)
 
 running = True
 interact = False
-camp = world_rules.add_camp()
 
-world_spawn.spawn_player(Player, 'priscilla', (773, 260), max_health=10000, speed=50) # need add default
-
-
-img, pos = world_spawn.load_location('start_city') # temporary is here, then remove
-objects = world_spawn.get_objects('start_city')
-
-debug, cmd, console = foo.dev_utils(units.player, units.enemies, screen=screen, world_time=world_time)
-
-cmd.register_all(console)
+collisions = []
 
 while running:
     events = foo.get_events()
@@ -41,9 +40,9 @@ while running:
     world.blit(img, pos)
 
     keys = pygame.key.get_pressed()
-    mouse_pos = foo.world_mouse(events, camera_rect)
+    mouse_pos = foo.world_mouse(events)
     if mouse_pos is not None:
-        print((round(mouse_pos.x), round(mouse_pos.y)),',')
+        collisions.append((round(mouse_pos.x), round(mouse_pos.y)))
 
     if not console.opened:
         player_obstacles = units.enemies + objects
@@ -57,8 +56,12 @@ while running:
             player_obstacles
         )
 
-        if interact and units.player.interaction_target:
-            print("INTERACT WITH:", units.player.interaction_target.name)
+        if interact and (
+                units.player.interaction_target
+                or units.player.can_exit_building(*core.exit_from())
+        ):
+            img, pos, objects = core.update(world_spawn)
+            world_rect = foo.current_rect(img, pos)
 
         for enemy in units.enemies:
             obstacles = [units.player] + [
@@ -73,9 +76,9 @@ while running:
     world_spawn.update(camera_rect)
     world_rules.update()
 
-    screen.blit(world, (0, 0), camera_rect)
+    render_camera, scale, render_offset, render_size = foo.render(screen, world, camera_rect, world_rect)
 
-    debug.set_camera(camera_rect)
+    debug.set_camera(render_camera, scale, render_offset, render_size)
     debug.mega_draw(units.player, *units.enemies, line_from=units.player, world=True)
     debug.draw_surround_targets(units.player, units.enemies)
     debug.draw_buildings(objects)
@@ -85,3 +88,6 @@ while running:
     pygame.display.flip()
 
 pygame.quit()
+
+if not running:
+    print(collisions)

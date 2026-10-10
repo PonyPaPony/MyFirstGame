@@ -9,6 +9,7 @@ class Player(Entity):
 
         self.in_combat = False
         self.interaction_target = None
+        self.current_location = None
         self.combat_exit_timer = 0
 
     def update_player(self, direction, dt, mouse_pos, world_rect, enemies, obstacles):
@@ -21,7 +22,7 @@ class Player(Entity):
     def object_filter(self, objects):
         buildings = []
         for obj in objects:
-            if isinstance(obj, Building):
+            if isinstance(obj, Building) and not obj.is_interior_obstacle:
                 buildings.append(obj)
         self.can_interact_with_build(buildings)
 
@@ -33,6 +34,12 @@ class Player(Entity):
                 return
         self.interaction_target = None
 
+    def can_exit_building(self, current_space, current_location):
+        if current_space == current_location:
+            return False
+
+        building = Building(current_space)
+        return building.player_at_exit(self)
 
     def get_target(self, mouse_pos, targets):
         if mouse_pos is None:

@@ -7,9 +7,9 @@ FPS = 60
 
 BACKGROUND_COLOR = (0, 0, 0)
 
-WIDTH = 1024
-HEIGHT = 720
-CAMERA = [0, 0, WIDTH, HEIGHT]
+CAMERA_W = 1600
+CAMERA_H = 900
+CAMERA = [0, 0, CAMERA_W, CAMERA_H]
 
 SCREEN_SETTINGS = {
     'Window': {
@@ -80,10 +80,10 @@ AGGRO_COOLDOWN = 15
 COMBAT_EXIT_DELAY = 3
 
 HITBOX_SETTINGS = {
-        'offset_x': 0.3,
+        'offset_x': 0.35,
         'offset_y': 0.8,
         'width': 0.4,
-        'height': 0.2,
+        'height': 0.1,
     }
 
 HITBOX_DEV = {
