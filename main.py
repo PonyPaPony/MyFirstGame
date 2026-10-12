@@ -1,93 +1,72 @@
-import config
 import pygame
-from units import Units
-from core import Core
-from world_spawn import WorldSpawn
-from world_rules import WorldRules
-from pygame_utils import Foo, WorldTime
+import config
+from game_utils import GameUtils
+from core import WorldInit
 
 
-foo = Foo() # maybe Core be good name for this
-core = Core()
-world_time = WorldTime()
-world_rules = WorldRules(world_time)
-units = Units()
-world_spawn = WorldSpawn(units)
+game = GameUtils().setup_pygame('border') #? WHAT: Инициализируем игру и львиную долю настроек
+dev = game.devs #? WHAT: Инициализируем инструментарий для отладки
+world = WorldInit() #? WHAT: Инициализируем мир и львиную долю мировых параметров
+dev.connect(world.units, world.world_spawn) #? WHAT: Передам юнитов и метод спавна в dev инструментарий
 
-screen, world, clock, camera_rect = foo.setup_pygame("Border")
-
-core.init_units(world_spawn)
-core.register_units(units)
-camp = core.connect(world_rules)
-img, pos, objects = core.update(world_spawn)
-world_rect = foo.current_rect(img, pos)
-debug, cmd, console = foo.dev_utils(units.player, units.enemies, screen=screen, world_time=world_time)
-cmd.register_all(console)
+world_rect = game.current_rect(world.image, world.pos) #? WHAT: Получаем границы мира из размера фона
+game.set_world_rect(world_rect) #? WHAT: Устанавливаем границы мира
 
 running = True
-interact = False
-
-collisions = []
 
 while running:
-    events = foo.get_events()
-    running, interact = foo.handle_events(console, events)
-
-    dt = clock.tick(config.FPS) / 1000
-    world_time.update(dt)
-
-    world.fill(config.BACKGROUND_COLOR)
-    world.blit(img, pos)
+    #! NOTE: подключаем события дельту времени и кнопочки
+    events = game.get_events()
+    running, interact = game.handle_events(events)
+    dt = game.get_delta_time()
 
     keys = pygame.key.get_pressed()
-    mouse_pos = foo.world_mouse(events)
-    if mouse_pos is not None:
-        collisions.append((round(mouse_pos.x), round(mouse_pos.y)))
+    mouse_pos = game.mouse.world_mouse(events)
 
-    if not console.opened:
-        player_obstacles = units.enemies + objects
-        dx, dy = foo.handle_move(keys)
-        units.player.update_player(
+    #! NOTE: Для отладки возможность рисовать полигоны онлайн без смс и регистрации
+    if dev.debug.polygon_editor and not dev.console.opened:
+        for event in events:
+            dev.debug.handle_event(event, mouse_pos)
+
+    if not dev.console.opened and not dev.debug.polygon_editor:
+        world.tick(dt, game.camera_rect) #? WHAT: Обновляем мир
+
+        player_obstacles = world.units.enemies + world.objects
+        dx, dy = game.handle_move(keys)
+        world.units.player.update_player(
             pygame.Vector2(dx, dy),
             dt,
             mouse_pos,
             world_rect,
-            units.enemies,
+            world.units.enemies,
             player_obstacles
         )
 
         if interact and (
-                units.player.interaction_target
-                or units.player.can_exit_building(*core.exit_from())
+                world.units.player.interaction_target
+                or world.units.player.can_exit_from_location(*world.core.exit_from())
         ):
-            img, pos, objects = core.update(world_spawn)
-            world_rect = foo.current_rect(img, pos)
+            #! NOTE: Переход в новую локацию
+            world.world_update() #? WHAT: Обновляем информацию о мире
+            world_rect = game.current_rect(world.image, world.pos) #? WHAT: Получаем границы мира из размера фона
+            game.set_world_rect(world_rect) #? WHAT: устанавливаем новые границы мира
 
-        for enemy in units.enemies:
-            obstacles = [units.player] + [
-                unit for unit in units.enemies if unit is not enemy] + objects
-            enemy.update_ai(units.player, dt, world_rect, obstacles=obstacles, enemies=units.enemies)
+        for enemy in world.units.enemies:
+            obstacles = [world.units.player] + [
+                unit for unit in world.units.enemies
+                if unit is not enemy
+            ] + world.objects
+            enemy.update_ai(world.units.player, dt, world_rect, obstacles=obstacles, enemies=world.units.enemies)
 
-    foo.units_draw(*units.get_all(), place=world)
+    game.world.fill(config.BACKGROUND_COLOR)
+    game.world.blit(world.image, world.pos)
 
-    camera_rect.center = units.player.get_rect().center
-    camera_rect.clamp_ip(world_rect)
+    game.render_units(*world.units.get_all()) #? HOW: Получаем коллекцию всех юнитов для последующей отрисовки
+    game.render(world.units.player) #? WHAT: Рендерим мир по положению игрока
 
-    world_spawn.update(camera_rect)
-    world_rules.update()
-
-    render_camera, scale, render_offset, render_size = foo.render(screen, world, camera_rect, world_rect)
-
-    debug.set_camera(render_camera, scale, render_offset, render_size)
-    debug.mega_draw(units.player, *units.enemies, line_from=units.player, world=True)
-    debug.draw_surround_targets(units.player, units.enemies)
-    debug.draw_buildings(objects)
-    debug.draw_buildings(objects, color='green', arg='threshold')
-    console.draw(screen)
+    dev.draw(world.objects) #? WHAT: Рисуем dev отладку
+    dev.debug.polygon_editor_draw(mouse_pos) #? WHAT: Рисуем полигоны онлайн без смс и регистрации
 
     pygame.display.flip()
 
 pygame.quit()
-
-if not running:
-    print(collisions)

@@ -1,5 +1,6 @@
-from data.location_templates import LOCATIONS
-from spawner import resize_image
+from data.locations_templates import LOCATIONS
+from foo_name import resize_image
+
 
 class Location:
     image_cache = {}

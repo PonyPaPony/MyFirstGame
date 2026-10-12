@@ -1,6 +1,6 @@
 import pygame
-from spawner import resize_image
-from data.location_templates import BUILDINGS
+from foo_name import resize_image
+from data.locations_templates import BUILDINGS
 
 
 class Building:
@@ -13,7 +13,7 @@ class Building:
         self.name = self.data['identity']['name']
         self.position = self.data['geometry']['position']
 
-        self.player_pos = self.data['threshold']['player_pos']
+        self.player_position = self.data['threshold']['player_pos']
 
         self.building_type = self.data['identity']['type']
         self.polygon = (
@@ -28,13 +28,11 @@ class Building:
         self.height = self.data['geometry']['height']
 
         if self.id not in Building.image_cache:
-            Building.image_cache[self.id] = self.resize_image_build()
+            Building.image_cache[self.id] = self.resize_build()
 
         self.image = Building.image_cache[self.id]
 
-    def resize_image_build(self):
-        if self.path == '':
-            return None
+    def resize_build(self):
         return resize_image(self.path, self.height)
 
     def get_polygon(self):

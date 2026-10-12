@@ -1,59 +1,47 @@
-import random
 import pygame
 import config
-from data.unit_templates import UNITS
-from spawner import spawn_creature
+import random
 from enemy import Enemy
+from data.entity_templates import UNITS
 
-class DevConsole:
+class Console:
     def __init__(self):
         self.commands = {}
-
         self.opened = False
-        self.input = ''
+        self.input = ""
 
         self.font = pygame.font.Font(None, 28)
+
 
     @staticmethod
     def command(name):
         def decorator(func):
             func.command_name = name
             return func
-
         return decorator
 
-    def draw(self, screen):
+    def console_draw(self, screen):
         if not self.opened:
             return
 
-        pygame.draw.rect(
-            screen,
-            (20, 20, 20),
-            (0, 0, screen.get_width(), 60)
-        )
-
-        text = self.font.render(
-            '> ' + self.input,
-            True,
-            'white'
-        )
-
+        pygame.draw.rect(screen, (20, 20, 20), (0, 0, screen.get_width(), 60))
+        text = self.font.render("> " + self.input, True, 'white')
         screen.blit(text, (10, 15))
 
     def handle_event(self, event):
-        if event.key == pygame.K_RETURN:
-            self.execute(self.input)
-            self.input = ''
+        match event.key:
+            case pygame.K_RETURN:
+                self.execute(self.input)
+                self.input = ""
 
-        elif event.key == pygame.K_BACKSPACE:
-            self.input = self.input[:-1]
+            case pygame.K_BACKSPACE:
+                self.input = self.input[:-1]
 
-        else:
-            self.input += event.unicode
+            case _:
+                self.input += event.unicode
 
     def execute(self, text):
         parts = text.split()
-
         if not parts:
             return
 
@@ -67,20 +55,20 @@ class DevConsole:
         try:
             command(*args)
         except (TypeError, ValueError) as e:
-            print(f'Error executing command: {e}')
+            print("Error executing command:", e)
 
     def toggle(self):
         self.opened = not self.opened
 
-class DevCommands:
-    def __init__(self, player, enemies, npc=None, world_time=None, debug_render=None):
-        self.player = player
-        self.enemies = enemies
-        self.npc = npc
-        self.world_time = world_time
-        self.debug = debug_render
+class ConsoleCommands:
+    def __init__(self, debug):
+        self.units = None
+        self.world_time = None
+        self.debug = debug
+        self.spawner = None
 
-    def register_all(self, console):
+
+    def register_commands(self, console):
         for name in dir(self):
             method = getattr(self, name)
 
@@ -91,19 +79,19 @@ class DevCommands:
             if command_name is not None:
                 console.commands[command_name] = method
 
-    def print_current_coordinates(self, trigger_phrase):
+    def print_current_position(self, trigger_phrase):
         if trigger_phrase == 'player':
-            print(f"Player: {self.player.pos}")
+            print(f"Player position: {self.units.player.position}")
             return
 
-        if not self.enemies:
-            print("No enemies")
+        if not self.units.enemies:
+            print("Enemies not found")
             return
 
-        for i, enemy in enumerate(self.enemies):
+        for i, enemy in enumerate(self.units.enemies):
             commands = {
                 'sur': f"Slot [{i}]: {enemy.surround_slot}",
-                'enemy': f"Enemy [{i}]: {enemy.pos}"
+                'enemy': F"Enemy [{i}]: {enemy.position}"
             }
 
             result = commands.get(trigger_phrase)
@@ -111,41 +99,84 @@ class DevCommands:
             if result is not None:
                 print(result)
 
-    def get_real_name(self, name):
-        names = {
-            'sword': 'goblin_swordman',
-            'archer': 'goblin_archer',
+    @staticmethod
+    def get_real_name(name):
+        return config.NAMES.get(name, name)
+
+    @staticmethod
+    def get_stat(stat):
+        stats = {
+            'hp': 'current_health',
+            'att': 'attack',
+            'def': 'defence',
+            'dodge': 'dodge'
         }
-        return names.get(name, name)
+        return stats.get(stat, stat)
 
-    @DevConsole.command('targets')
-    def toggle_targets(self):
-        self.debug.show_targets = (
-            not self.debug.show_targets
-        )
+    #! NOTE: dev commands
 
-    @DevConsole.command('to_enemy')
-    def toggle_to_enemy(self):
-        self.debug.to_enemy = (
-            not self.debug.to_enemy
-        )
+    @Console.command("debug")
+    def toggle_debug(self, *flags):
+        options = {
+            '-f': 'enabled',
+            '-s': 'show_polygon',
+            '-g': 'show_surround',
+            '-p': 'polygon_editor'
+        }
 
-    @DevConsole.command('spawn')
+        if not flags:
+            flags = ('-f',)
+
+        if '-all' in flags:
+            flags = tuple(flag for flag in options if flag not in flags)
+
+        for flag in flags:
+            attr = options.get(flag)
+
+            if attr is None:
+                print(f"Unknown debug flag: {flag}")
+                continue
+
+            setattr(self.debug, attr, not getattr(self.debug, attr))
+
+
+    @Console.command("polygon")
+    def toggle_polygon_editor(self):
+        if self.debug.enabled:
+            self.debug.polygon_editor = not self.debug.polygon_editor
+            return
+        print("polygon editor can be toggled when debug is enabled")
+
+    @Console.command("show")
+    def toggle_show(self):
+        if self.debug.enabled:
+            self.debug.show = not self.debug.show
+        else:
+            print("show can be toggled when debug is enabled")
+
+    @Console.command("grop_up")
+    def toggle_points(self):
+        if self.debug.enabled:
+            self.debug.show_surround = not self.debug.show_surround
+        else:
+            print("points can be toggled when debug is enabled")
+
+    @Console.command("spawn")
     def spawn(self, name, count=1):
-        if name == 'priscilla':
-            print('Cannot spawn player as enemy')
+        if name == 'Priscilla' or name == 'Player':
+            print("Cannot spawn player as enemy")
             return
 
         real_name = self.get_real_name(name)
 
         if real_name not in UNITS:
-            print(f'Unknown creature: {name}')
+            print(f"Unknown unit: {name}")
             return
 
         try:
             count = int(count)
         except ValueError:
-            print(f'Invalid count: {count}')
+            print(f"Invalid count: {count}")
             return
 
         if not 1 <= count <= 100:
@@ -154,106 +185,59 @@ class DevCommands:
 
         for _ in range(count):
             new_x = random.randint(
-                int(self.player.pos.x - 100),
-                int(self.player.pos.x + 100)
+                int(self.units.player.position.x - 100),
+                int(self.units.player.position.x + 100)
             )
             new_y = random.randint(
-                int(self.player.pos.y - 100),
-                int(self.player.pos.y + 100)
+                int(self.units.player.position.y - 100),
+                int(self.units.player.position.y + 100)
             )
 
-            enemy = spawn_creature(
-                Enemy,
-                real_name,
-                (new_x, new_y)
-            )
+            self.spawner.add_record(Enemy, real_name, (new_x, new_y), 'enemies')
 
-            self.enemies.append(enemy)
+    @Console.command('pos')
+    def debug_print(self, target='player'):
+        self.print_current_position(target)
 
-    @DevConsole.command('debug')
-    def toggle_debug(self):
-        self.debug.enabled = not  self.debug.enabled
-
-    @DevConsole.command('tp')
+    @Console.command("tp")
     def teleport(self, x, y):
         x, y = int(x), int(y)
-        self.player.pos.update(x, y)
+        self.units.player.position.update(x, y)
 
-    @DevConsole.command('pos')
-    def debug_print(self, target='player'):
-        self.print_current_coordinates(target)
+    @Console.command('killall')
+    def  killall(self):
+        self.units.enemies.clear()
 
-    @DevConsole.command('killall')
-    def killall(self):
-        self.enemies.clear()
-        print("All enemies removed")
-
-    @DevConsole.command('ai')
+    @Console.command('ai')
     def ai(self):
-        for i, enemy in enumerate(self.enemies):
+        for i, enemy in enumerate(self.units.enemies):
             print(
-                f"{i}: {enemy.unit_type} "
-                f"state={enemy.state} "
+                f"{i}: {enemy.unit_type}"
+                f"state={enemy.state}"
                 f"slot={enemy.surround_slot}"
             )
 
-    @DevConsole.command('slots')
-    def slots(self):
-        for unit_type, count in config.SLOTS.items():
-            occupied = {
-                enemy.surround_slot
-                for enemy in self.enemies
-                if enemy.unit_type == unit_type
-                   and enemy.surround_slot is not None
-            }
-
-            free = set(range(count)) - occupied
-
-            print(
-                f"{unit_type}: "
-                f"occupied={sorted(occupied)}, "
-                f"free={sorted(free)}"
-            )
-
-    @DevConsole.command('run')
-    def run_t(self, number=1, name='sword'):
-        self.teleport(500, 500)
-        self.debug_print('player')
-        self.spawn(name, number)
-        self.teleport(800, 800)
-        self.debug_print('enemy')
-
-    @DevConsole.command('set_hp')
-    def set_hp(self, target, num):
+    @Console.command("set")
+    def set_stat(self, target, stat, num):
         num = max(0, int(num))
         if target == 'player':
-            self.player.stats['current_health'] = num
-        else:
-            for enemy in self.enemies:
-                enemy.stats['current_health'] = num
+            self.units.player.stats[self.get_stat(stat)] = num
+            return
+        for enemy in self.units.enemies:
+            enemy.stats[self.get_stat(stat)] = num
 
-    @DevConsole.command("status")
-    def status(self):
-        print(f"Player HP: {self.player.stats['current_health']}")
-        for enemy in self.enemies:
-            print(f"Enemy HP: {enemy.stats['current_health']}")
-
-    @DevConsole.command("time")
-    def time(self, set_time=False):
-        if not set_time:
+    @Console.command('time')
+    def game_time(self, set_time=None):
+        if set_time is None:
             print(
-                "day", self.world_time.get_day(),
+                'day', self.world_time.get_day(),
                 "hour", self.world_time.get_hour(),
                 "minute", self.world_time.get_minute()
             )
         else:
-            self.world_time.set_time(int(set_time))
+            self.world_time.set_time(set_time)
             print(
-                "day", self.world_time.get_day(),
+                'day', self.world_time.get_day(),
                 "hour", self.world_time.get_hour(),
                 "minute", self.world_time.get_minute()
             )
-
-    @DevConsole.command('quit')
-    def quit(self):
-        pygame.quit()

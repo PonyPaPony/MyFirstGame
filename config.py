@@ -1,49 +1,29 @@
 import pygame
 
 
-GAME_NAME = 'Maybe Later'
-
-FPS = 60
-
-BACKGROUND_COLOR = (0, 0, 0)
-
-CAMERA_W = 1600
-CAMERA_H = 900
-CAMERA = [0, 0, CAMERA_W, CAMERA_H]
-
-SCREEN_SETTINGS = {
-    'Window': {
-        'size': (1024, 720),
-        'method': pygame.RESIZABLE
-    },
-    'Border': {
-        'size': (0, 0),
-        'method': pygame.NOFRAME
-    },
-    "Full Screen": {
-        'size': (0, 0),
-        'method': pygame.FULLSCREEN
-    }
-}
-
-MOVEMENT = {
-    pygame.K_w: (0, -1),  # Вверх
-    pygame.K_s: (0, 1),   # Вниз
-    pygame.K_a: (-1, 0),  # Влево
-    pygame.K_d: (1, 0),   # Вправо
-}
-
+#! NOTE: Настройки игры
 TILE_SIZE = 64
 SPEED_POINTS_PER_TILE = 10
+AGGRO_COOLDOWN = 15
+COMBAT_EXIT_DELAY = 3
 
-SURW = 100 * TILE_SIZE
-SURH = 60 * TILE_SIZE
+CALENDAR = {
+    'year': 360,
+    'month': 30
+}
+TIMES = {
+    'day': 1440,
+    'hour': 60
+}
 
-DRAW = {
-    'rect': pygame.draw.rect,
-    'circle': pygame.draw.circle,
-    'line': pygame.draw.line,
-    'polygon': pygame.draw.polygon,
+MARGINS = {
+    'active': 0.2,
+    'despawn': 0.3
+}
+
+RESPAWN_TIME = {
+    'local': 180,
+    'global': 1440
 }
 
 AGGRO = {
@@ -69,36 +49,58 @@ ZONE = {
     }
 }
 
-
 SLOTS = {
     'melee':  8,
     'range':  8,
     'mage':  8,
 }
 
-AGGRO_COOLDOWN = 15
-COMBAT_EXIT_DELAY = 3
 
-HITBOX_SETTINGS = {
-        'offset_x': 0.35,
-        'offset_y': 0.8,
-        'width': 0.4,
-        'height': 0.1,
+#! NOTE: Настройки экрана
+
+GAME_NAME = 'Maybe Later'
+
+SCREEN_SETTINGS = {
+    'window': {
+        'size': (1280, 720),
+        'method': pygame.RESIZABLE,
+        'camera': (1280, 720)
+    },
+    'border': {
+        'size': (0, 0),
+        'method': pygame.NOFRAME,
+        'camera': None
+    },
+    'fullscreen': {
+        'size': (0, 0),
+        'method': pygame.FULLSCREEN,
+        'camera': None
     }
-
-HITBOX_DEV = {
-    'offset_x': 0.5,
-    'offset_y': 0.5,
-    'width': 1,
-    'height': 1
-    }
-
-MARGINS = {
-    'active': 0.2,
-    'despawn': 0.3
 }
 
-RESPAWN_TIME = {
-    'local': 180,
-    'global': 1440
+SURFACE = (100 * TILE_SIZE, 60 * TILE_SIZE)
+FPS = 60
+BACKGROUND_COLOR = (0, 0, 0)
+
+#! NOTE: Настройки управления
+MOVEMENT_KEYS = {
+    pygame.K_w: (0, -1),
+    pygame.K_s: (0, 1),
+    pygame.K_a: (-1, 0),
+    pygame.K_d: (1, 0)
+}
+
+#! NOTE: Имена для косоли
+#- TODO(linked): Перенести в будущем в иное место
+NAMES = {
+    'sword': 'goblin_swordman',
+    'archer': 'goblin_archer',
+}
+
+DRAW = {
+    'rect': pygame.draw.rect,
+    'circle': pygame.draw.circle,
+    'line': pygame.draw.line,
+    'lines': pygame.draw.lines,
+    'polygon': pygame.draw.polygon,
 }

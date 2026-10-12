@@ -1,93 +1,105 @@
 import random
 import config
 
-def try_to_hit(attacker, defender):
-    accuracy = min(attacker['accuracy'], attacker['accuracy_limit'])
-    dodge = min(defender['dodge'], defender['dodge_limit'])
 
-    if accuracy <= 100:
-        hit_chance = accuracy - dodge
-    else:
-        bonus_accuracy = (accuracy - 100) / 2
-        hit_chance = 100 - dodge + bonus_accuracy
+class Combat:
+    def __init__(self):
 
-    hit_chance = max(0, min(100, hit_chance))
+        self.threshold = 100
 
-    roll = random.randint(1, 100)
-    return roll <= hit_chance
+        self.accuracy = 'accuracy'
+        self.dodge = 'dodge'
+        self.current_health = 'current_health'
+        self.crit_chance = 'crit_chance'
+        self.attack_stat = 'attack'
+        self.attack_speed = 'attack_speed'
+        self.attack_range = 'attack_range'
+        self.defence = 'defence'
 
+        self.limit = "_limit"
 
-def attack(attacker, defender):
-    if defender['current_health'] <= 0:
-        return 0, 0
+    def roll(self):
+        return random.randint(1, self.threshold)
 
-    if attacker['current_health'] < 1:
-        return 0, defender['current_health']
+    def try_to_hit(self, attacker, defender):
+        accuracy = min(attacker[self.accuracy], attacker[self.accuracy + self.limit])
+        dodge = min(defender[self.dodge], defender[self.dodge + self.limit])
 
-    if not try_to_hit(attacker, defender):
-        return 0, defender['current_health']
+        if accuracy <= self.threshold:
+            hit_chance = accuracy - dodge
+        else:
+            bonus_accuracy = (accuracy - self.threshold) / 2
+            hit_chance = self.threshold - dodge + bonus_accuracy
 
-    atk = max(1, attacker['attack'])
-    dff = defender['defence']
+        hit_chance = max(0, min(self.threshold, hit_chance))
 
-    return deal_damage(atk, dff, attacker, defender)
+        roll = self.roll()
 
+        return roll <= hit_chance
 
-def effective_defence(defence, pen):
-    ef_defence = defence * (1 - pen)
-    return max(0, ef_defence)
+    @staticmethod
+    def effective_defence(defence, pen):
+        eff_defence = defence * (1 - pen)
+        return max(0, eff_defence)
 
+    def penetration(self, atk):
+        pen = atk / (atk + self.threshold)
+        return min(0.5, pen)
 
-def penetration(atk):
-    pen = atk / (atk + 100)
-    return min(0.5, pen)
+    def crit_result(self, attacker):
+        chance = min(attacker[self.crit_chance], attacker[self.crit_chance + self.limit])
+        roll = self.roll()
+        return roll <= chance
 
+    def is_alive(self, unit):
+        return unit[self.current_health] > 0
 
-def get_crit_result(attacker):
-    chance = min(attacker['crit_chance'], attacker['crit_chance_limit'])
-    roll = random.randint(1, 100)
-    return roll <= chance
+    def deal_damage(self, attack, defence, attacker, defender):
+        pen = self.penetration(attack)
+        eff_defence = self.effective_defence(defence, pen)
 
+        damage = attack * self.threshold / (self.threshold + eff_defence)
 
-def deal_damage(atk, dff, attacker, defender):
-    pen = penetration(atk)
-    edef = effective_defence(dff, pen)
+        if self.crit_result(attacker):
+            damage = damage * (1 + attacker['crit_dmg'] / self.threshold)
 
-    damage = atk * 100 / (100 + edef)
+        damage = max(1, round(damage))
+        defender[self.current_health] = max(0, defender[self.current_health] - damage)
 
-    if get_crit_result(attacker):
-        damage = damage * (1 + attacker['crit_dmg'] / 100)
+        return damage, defender[self.current_health]
 
-    damage = max(1, round(damage))
-    defender['current_health'] = max(0, defender['current_health'] - damage)
+    def can_attack(self, attacker, defender):
+        distance = (defender.feet() - attacker.feet()).length()
 
-    return damage, defender['current_health']
+        attack_range = (attacker.stats[self.attack_range] * config.TILE_SIZE / 2)
 
+        return distance <= attack_range
 
-def can_attack(attacker, defender):
-    distance = (
-        defender.feet() - attacker.feet()
-    ).length()
+    def try_attack(self, attacker, defender):
+        if not self.can_attack(attacker, defender):
+            return False
 
-    attack_range = (
-        attacker.stats['attack_range'] * config.TILE_SIZE / 2
-    )
+        if attacker.attack_timer <= 0:
+            self.attack(attacker.stats, defender.stats)
 
-    return distance <= attack_range
+            attacker.attack_timer = max(
+                attacker.stats[self.attack_speed],
+                attacker.stats[self.attack_speed + self.limit]
+            )
 
-def try_attack(attacker, defender):
-    if not can_attack(attacker, defender):
-        return False
+        return True
 
-    if attacker.attack_timer <= 0:
-        attack(attacker.stats, defender.stats)
+    def attack(self, attacker, defender):
+        if defender[self.current_health] <= 0:
+            return 0, 0
 
-        attacker.attack_timer = max(
-            attacker.stats['attack_speed'],
-            attacker.stats['attack_speed_limit']
-        )
+        if attacker[self.current_health] < 1:
+            return 0, defender[self.current_health]
 
-    return True
+        if not self.try_to_hit(attacker, defender):
+            return 0, defender[self.current_health]
 
-def is_alive(unit):
-    return unit['current_health'] > 0
+        attack = max(1, attacker[self.attack_stat])
+        defence = defender[self.defence]
+
+        return self.deal_damage(attack, defence, attacker, defender)
