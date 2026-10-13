@@ -3,6 +3,7 @@ import config
 from combat import Combat
 from data.entity_templates import UNITS, ATTACK_RANGE, STATE, LIMITS
 from foo_name import resize_image
+from buildings import Obstacle
 
 
 class Entity:
@@ -43,6 +44,11 @@ class Entity:
             round(width * self.hitbox['w']),
             round(height * self.hitbox['h'])
         )
+
+    def get_collision_circle(self, pos=None):
+        hitbox = self.get_hitbox(pos)
+        return pygame.Vector2(hitbox.center), 5
+
     def draw(self, screen):
         screen.blit(self.image, self.position)
 
@@ -64,30 +70,43 @@ class Entity:
         if self.attack_timer > 0:
             self.attack_timer = max(0, self.attack_timer - dt)
 
-    #! NOTE: Я думаю что мув в идеале вынести в отдельный класс в этом же файле но пока в раздумьях
+    #- TODO(core): Improve circle collision sliding along angled walls
+    def collision_with_obstacle(self, candidate, obstacle):
+        if isinstance(obstacle, Obstacle):
+            center, radius = self.get_collision_circle(candidate)
+            return obstacle.collides_with_circle(center, radius)
+
+        return False
+
+    @staticmethod
+    def collision_with_entity(current, future, obstacle):
+        other = obstacle.get_hitbox()
+
+        current_lap = current.clip(other)
+        future_lab = future.clip(other)
+
+        current_area = (current_lap.width * current_lap.height)
+        future_area = (future_lab.width * future_lab.height)
+
+        if future_area >= current_area:
+            return True
+        return False
+
     def can_move(self, candidate, obstacles):
         current = self.get_hitbox()
         future = self.get_hitbox(candidate)
 
         for obstacle in obstacles:
+            if isinstance(obstacle, Obstacle):
+                if self.collision_with_obstacle(candidate, obstacle):
+                    return False
+                continue
+
             if not obstacle.collides_with(future):
                 continue
 
             if isinstance(obstacle, Entity):
-                other = obstacle.get_hitbox()
-
-                current_lap = current.clip(other)
-                future_lab = future.clip(other)
-
-                current_area = (
-                    current_lap.width * current_lap.height
-                )
-
-                future_area = (
-                    future_lab.width * future_lab.height
-                )
-
-                if future_area >= current_area:
+                if self.collision_with_entity(current, future, obstacle):
                     return False
             else:
                 return False

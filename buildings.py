@@ -76,3 +76,34 @@ class Building:
         left, right, top, bottom = self.sides(self.exit)
         rect = pygame.Rect(left, top, right - left, bottom - top)
         return rect.colliderect(player.get_hitbox())
+
+
+class Obstacle:
+    def __init__(self, polygon):
+        self.polygon = polygon
+
+    def get_edges(self):
+        for i in range(len(self.polygon)):
+            yield self.polygon[i], self.polygon[(i + 1) % len(self.polygon)]
+
+    def collides_with(self, rect):
+        for start, end in self.get_edges():
+            if rect.clipline(start, end):
+                return True
+
+        return False
+
+    def get_polygon(self):
+        return self.polygon
+
+    @staticmethod
+    def _dist_sq_to_segment(point, a, b):
+        a, ab = pygame.Vector2(a), pygame.Vector2(b) - a
+        len_sq = ab.length_squared()
+        t = max(0, min(1, (point - a).dot(ab) / len_sq)) if len_sq else 0
+        return point.distance_squared_to(a + ab * t)
+
+    def collides_with_circle(self, center, radius):
+        center = pygame.Vector2(center)
+        return any(self._dist_sq_to_segment(center, a, b) <= radius ** 2
+                   for a, b in self.get_edges())

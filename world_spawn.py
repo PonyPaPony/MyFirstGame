@@ -1,7 +1,7 @@
 import config
 from entity import Spawner
 from locations import Location
-from buildings import Building
+from buildings import Building, Obstacle
 from combat import Combat
 from data.locations_templates import LOCATIONS, BUILDINGS
 
@@ -45,10 +45,22 @@ class WorldSpawn:
         return None
 
     def get_objects(self, loc):
-        return [self.load_building(name) for name in LOCATIONS[loc]['buildings']]
+        objects = [
+            self.load_building(name)
+            for name in LOCATIONS[loc]['buildings']
+        ]
 
-    def get_interior(self, target):
-        return [Building(target.id, polygon=points) for points in target.data['geometry']['interior_collision']]
+        for polygon in LOCATIONS[loc]['geometry']['collision']:
+            objects.append(Obstacle(polygon))
+
+        return objects
+
+    @staticmethod
+    def get_interior(target):
+        return [
+            Obstacle(points)
+            for points in target.data['geometry']['interior_collision']
+        ]
 
 
     #! NOTE: Entity Приколы

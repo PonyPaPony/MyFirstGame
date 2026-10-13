@@ -3,6 +3,7 @@ import config
 import random
 from enemy import Enemy
 from data.entity_templates import UNITS
+from data.locations_templates import BUILDINGS
 
 class Console:
     def __init__(self):
@@ -113,6 +114,13 @@ class ConsoleCommands:
         }
         return stats.get(stat, stat)
 
+    @staticmethod
+    def get_position(target):
+        targets = {
+            'smith': BUILDINGS['undershift_blacksmith']['threshold']['player_pos']['exit']
+        }
+        return targets.get(target)
+
     #! NOTE: dev commands
 
     @Console.command("debug")
@@ -150,7 +158,7 @@ class ConsoleCommands:
     @Console.command("show")
     def toggle_show(self):
         if self.debug.enabled:
-            self.debug.show = not self.debug.show
+            self.debug.show_polygon = not self.debug.show_polygon
         else:
             print("show can be toggled when debug is enabled")
 
@@ -200,9 +208,20 @@ class ConsoleCommands:
         self.print_current_position(target)
 
     @Console.command("tp")
-    def teleport(self, x, y):
-        x, y = int(x), int(y)
-        self.units.player.position.update(x, y)
+    def teleport(self, target=None, x=None):
+        if target is None:
+            raise TypeError("Укажи цель или координаты")
+
+        if x is not None:
+            self.units.player.position.update(int(target), int(x))
+            return
+
+        position = self.get_position(target)
+
+        if position is None:
+            raise ValueError(f"Unknown teleport target: {target}")
+
+        self.units.player.position.update(position)
 
     @Console.command('killall')
     def  killall(self):
@@ -241,3 +260,8 @@ class ConsoleCommands:
                 "hour", self.world_time.get_hour(),
                 "minute", self.world_time.get_minute()
             )
+
+    @Console.command("run")
+    def run(self):
+        self.teleport('smith')
+        self.toggle_debug('-f', '-s')

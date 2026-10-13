@@ -1,5 +1,6 @@
 import pygame
 import config
+from buildings import Building
 
 
 class DebugRenderer:
@@ -200,8 +201,9 @@ class DebugRenderer:
             return
 
         for obj in objects:
-            if arg == 'threshold' and obj.is_interior_obstacle:
-                continue
+            if arg == 'threshold':
+                if not isinstance(obj, Building) or obj.is_interior_obstacle:
+                    continue
 
             points = []
             func = obj.get_polygon if arg == 'polygon' else obj.get_threshold
