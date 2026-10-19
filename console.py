@@ -61,12 +61,18 @@ class Console:
     def toggle(self):
         self.opened = not self.opened
 
+
+#! NOTE: I have a some thoughts about rework console on three new methods user console, low admin level, top admin level
+#! NOTE: User just common cheats
+#! NOTE: Low admin level
+#! NOTE: Top admin level
 class ConsoleCommands:
     def __init__(self, debug):
         self.units = None
         self.world_time = None
         self.debug = debug
         self.spawner = None
+        self.get_current_space = None
 
 
     def register_commands(self, console):
@@ -129,7 +135,8 @@ class ConsoleCommands:
             '-f': 'enabled',
             '-s': 'show_polygon',
             '-g': 'show_surround',
-            '-p': 'polygon_editor'
+            '-p': 'polygon_editor',
+            '-P': 'path_editor'
         }
 
         if not flags:
@@ -152,8 +159,17 @@ class ConsoleCommands:
     def toggle_polygon_editor(self):
         if self.debug.enabled:
             self.debug.polygon_editor = not self.debug.polygon_editor
+            self.debug.editor_mode = 'polygon'
             return
         print("polygon editor can be toggled when debug is enabled")
+
+    @Console.command('path')
+    def toggle_path_editor(self):
+        if self.debug.enabled:
+            self.debug.polygon_editor = not self.debug.polygon_editor
+            self.debug.editor_mode = 'path'
+            return
+        print("path editor can be toggled when debug is enabled")
 
     @Console.command("show")
     def toggle_show(self):
@@ -201,7 +217,7 @@ class ConsoleCommands:
                 int(self.units.player.position.y + 100)
             )
 
-            self.spawner.add_record(Enemy, real_name, (new_x, new_y), 'enemies')
+            self.spawner.add_record(Enemy, real_name, (new_x, new_y), 'enemies', self.get_current_space)
 
     @Console.command('pos')
     def debug_print(self, target='player'):

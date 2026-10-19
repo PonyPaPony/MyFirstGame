@@ -45,6 +45,15 @@ class Building:
         for i in range(len(self.polygon)):
             yield self.polygon[i], self.polygon[(i + 1) % len(self.polygon)]
 
+    def collides_with(self, rect):
+        for start, end in self.get_edges():
+            if rect.clipline(start, end):
+                return True
+
+        return False
+
+
+    #! NOTE: This methods will be moved to a separate class as like Scene or something here
     def sides(self, area):
         xs = []
         ys = []
@@ -59,13 +68,6 @@ class Building:
         bottom = max(ys)
 
         return left, right, top, bottom
-
-    def collides_with(self, rect):
-        for start, end in self.get_edges():
-            if rect.clipline(start, end):
-                return True
-
-        return False
 
     def player_at_threshold(self, player):
         left, right, top, bottom = self.sides(self.threshold)

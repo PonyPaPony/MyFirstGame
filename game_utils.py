@@ -23,7 +23,6 @@ class GameUtils:
         self.mouse = Mouse(self)
         self.devs = None
         self.console = None
-        self.world_time = WorldTime()
 
     @staticmethod
     def create_screen(mode):
@@ -214,13 +213,13 @@ class Devs:
         self.debug = DebugRenderer(game.screen)
         self.commands = ConsoleCommands(self.debug)
         self.commands.register_commands(self.console)
-        self.world_time = self.game.world_time
 
 
-    def connect(self, units, spawner):
+    def connect(self, units, spawner, world_time, space_id):
         self.commands.units = units
         self.commands.spawner = spawner
-        self.commands.world_time = self.world_time
+        self.commands.world_time = world_time
+        self.commands.get_current_space = space_id
 
     def draw(self, objects=None):
         self.debug.set_camera(*self.game.render_settings)
@@ -264,4 +263,4 @@ class WorldTime:
 
     #! NOTE: to develop moment
     def set_time(self, minutes):
-        self.total_minutes = minutes
+        self.total_minutes = int(minutes)

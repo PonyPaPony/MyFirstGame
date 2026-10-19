@@ -7,7 +7,7 @@ from core import WorldInit
 game = GameUtils().setup_pygame('border') #? WHAT: Инициализируем игру и львиную долю настроек
 dev = game.devs #? WHAT: Инициализируем инструментарий для отладки
 world = WorldInit() #? WHAT: Инициализируем мир и львиную долю мировых параметров
-dev.connect(world.units, world.world_spawn) #? WHAT: Передам юнитов и метод спавна в dev инструментарий
+dev.connect(world.units, world.world_spawn, world.world_time, world.core.current_space) #? WHAT: Передам юнитов и метод спавна в dev инструментарий
 
 world_rect = game.current_rect(world.image, world.pos) #? WHAT: Получаем границы мира из размера фона
 game.set_world_rect(world_rect) #? WHAT: Устанавливаем границы мира
@@ -31,7 +31,7 @@ while running:
     if not dev.console.opened and not dev.debug.polygon_editor:
         world.tick(dt, game.camera_rect) #? WHAT: Обновляем мир
 
-        player_obstacles = world.units.enemies + world.objects
+        player_obstacles = world.units.enemies + world.units.npc + world.objects
         dx, dy = game.handle_move(keys)
         world.units.player.update_player(
             pygame.Vector2(dx, dy),

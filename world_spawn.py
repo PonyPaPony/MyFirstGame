@@ -1,9 +1,13 @@
+import pygame
 import config
 from entity import Spawner
 from locations import Location
 from buildings import Building, Obstacle
 from combat import Combat
+from enemy import Enemy
+from NPC import NPC
 from data.locations_templates import LOCATIONS, BUILDINGS
+from data.entity_templates import UNITS
 
 class WorldSpawn:
     def __init__(self, units):
@@ -100,8 +104,24 @@ class WorldSpawn:
     def should_despawn(self, pos):
         return not self.despawn_rect.collidepoint(pos) if self.despawn_rect is not None else False
 
-    def add_record(self, entity_class, name, pos, group, **kwargs):
-        record = SpawnRecord(entity_class, name, pos, group, **kwargs)
+    def set_npc_spawn_data(self, name, record):
+        image = self.spawn.get_image(name)
+        hitbox = UNITS[name]['hitbox']
+
+        rect = pygame.Rect(
+            round(image.get_width() * hitbox['x']),
+            round(image.get_height() * hitbox['y']),
+            round(image.get_width() * hitbox['w']),
+            round(image.get_height() * hitbox['h'])
+        )
+
+        record.feet_offset = pygame.Vector2(rect.center)
+
+
+    def add_record(self, entity_class, name, pos, group, space_id, **kwargs):
+        record = SpawnRecord(entity_class, name, pos, group, space_id, **kwargs)
+        if group == 'npc':
+            self.set_npc_spawn_data(name, record)
         self.records.append(record)
         return record
 
@@ -135,20 +155,32 @@ class WorldSpawn:
         record.entity = None
         record.alive = False
 
-    def try_to_activate(self, record):
-        if record.entity is None and record.alive and self.is_active(record.pos):
+    def check_record(self, target, name, group):
+        if target == 'npc':
+            if any(record.name == name and record.group == group for record in self.records):
+                return True
+            return False
+        return False
+
+    def try_to_activate(self, record, space_id):
+        if record.entity is None and record.alive and self.is_active(record.pos) and record.space_id == space_id:
             self.activate_record(record)
             return True
         return False
 
-    def update(self, camera):
+    def update(self, camera, space_id):
         self.get_active_rect(camera)
         self.get_despawn_rect(camera)
+
         for record in self.records:
-            if self.try_to_activate(record):
+            if self.try_to_activate(record, space_id):
                 continue
 
             if record.entity is None:
+                continue
+
+            if record.space_id != space_id:
+                self.deactivate_record(record)
                 continue
 
             if not self.combat.is_alive(record.entity.stats):
@@ -156,13 +188,46 @@ class WorldSpawn:
             elif self.should_despawn(record.entity.feet()):
                 self.deactivate_record(record)
 
+    def register_entity(self, space_id, temp_arg):
+        #- TODO(core): This function just temporary method and should be upgrade
+
+        if space_id is None:
+            return
+        if temp_arg is None or temp_arg not in ['enemies', 'npc']:
+            return
+
+        permitted_targets = LOCATIONS[space_id]['population_rules']['permitted_' + temp_arg]
+        #- TODO(next): maybe need duplicate upper string for BUILDINGS in nearby future
+
+        entities = {
+            'enemies': Enemy,
+            'npc': NPC,
+        }
+
+        for target in permitted_targets:
+            name = target
+            position = UNITS[name]['position']
+            spawn_space_id = UNITS[name]['space_id']
+            group = UNITS[name]['group']
+
+            if self.check_record(temp_arg, name, group):
+                continue
+
+            self.add_record(entities[temp_arg], name, position, group, spawn_space_id)
 
 class SpawnRecord:
-    def __init__(self, entity_class, name, pos, group, **kwargs):
+    def __init__(self, entity_class, name, pos, group, space_id, **kwargs):
         self.entity_class = entity_class
         self.name = name
         self.pos = pos
         self.group = group
         self.kwargs = kwargs
+
         self.entity = None
         self.alive = True
+
+        self.space_id = space_id
+        self.current_state = None
+        self.target_state = None
+        self.path_index = 0
+        self.feet_offset = None

@@ -51,7 +51,9 @@ LOCATIONS = {
         },
         'population_rules': {
             'permitted_enemies': [],
-            'permitted_npc': []
+            'permitted_npc': [
+                "Oliver",
+            ]
         },
         'buildings': [
             'undershift_blacksmith',

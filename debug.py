@@ -12,8 +12,11 @@ class DebugRenderer:
         self.show_polygon = False
         self.show_surround = False
 
+        self.editor_mode = 'polygon'
+
         self.points = []
         self.polygons = []
+        self.paths = []
 
         self.camera = pygame.Vector2(0, 0)
         self.scale = 1
@@ -58,6 +61,13 @@ class DebugRenderer:
 
             self.draw('rect', rect_color, self.hitbox(unit), width=2)
             self.draw('circle', center_color, self.center(unit), radius=5)
+
+            self.draw(
+                'circle',
+                'magenta',
+                self.world_to_screen(unit.feet()),
+                radius=5
+            )
 
             if line_from is not None:
                 self.draw('line', 'white', self.center(line_from), self.center(unit), width=3)
@@ -143,46 +153,67 @@ class DebugRenderer:
                 width=2
             )
 
-    #! NOTE: PolygonEditor
+    #! NOTE: Handlers
     def handle_event(self, event, mouse_pos):
         match event.type:
             case pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and mouse_pos is not None:
-                    point = (
-                        round(mouse_pos.x),
-                        round(mouse_pos.y)
-                    )
-                    self.points.append(point)
+                self.handle_mouse(event, mouse_pos)
 
             case pygame.KEYDOWN:
-                # Отменить последнюю точку
-                if event.key == pygame.K_BACKSPACE:
-                    if self.points:
-                        self.points.pop()
+                self.handle_keyboard(event.key)
 
-                # Завершить полигон
-                elif event.key == pygame.K_RETURN:
-                    if len(self.points) >= 3:
-                        self.polygons.append(self.points.copy())
-                        self.points.clear()
+    def handle_mouse(self, event, mouse_pos):
+        if event.button == 1 and mouse_pos is not None:
+            point = (round(mouse_pos.x), round(mouse_pos.y))
+            self.points.append(point)
 
-                # Вывести координаты
-                elif event.key == pygame.K_c:
-                    print("=== POLYGONS ===")
-                    for polygon in self.polygons:
-                        print(f"{polygon},")
+    def handle_keyboard(self, key):
+        commands = {
+            pygame.K_BACKSPACE: self.undo_point,
+            pygame.K_RETURN: self.save_shape,
+            pygame.K_c: self.print_shapes,
+            pygame.K_DELETE: self.points.clear,
+        }
 
-                # Очистить незавершённый полигон
-                elif event.key == pygame.K_DELETE:
-                    self.points.clear()
+        action = commands.get(key)
 
+        if action:
+            action()
+
+    def undo_point(self):
+        if self.points:
+            self.points.pop()
+
+    def save_shape(self):
+        is_path = self.editor_mode == 'path'
+        minimum = 2 if is_path else 3
+        storage = self.paths if is_path else self.polygons
+
+        if len(self.points) >= minimum:
+            storage.append(self.points.copy())
+            self.points.clear()
+
+    def print_shapes(self):
+        storage = {
+            'polygon': self.polygons,
+            'path': self.paths,
+        }
+
+        print(f"=== {self.editor_mode.upper()} ===")
+
+        for shape in storage[self.editor_mode]:
+            print(f"{shape},")
+
+    #! NOTE: PolygonEditor
     def polygon_editor_draw(self, mouse_pos):
         if not self.polygon_editor or not self.enabled:
             return
 
         for polygon in self.polygons:
-            points = [self.world_to_screen(p) for p in polygon]
-            self.draw('polygon', 'red', points, width=2)
+            self.draw_shape(polygon, 'polygon', 'red')
+
+        for path in self.paths:
+            self.draw_shape(path, 'path', 'green')
 
         points = [self.world_to_screen(p) for p in self.points]
 
@@ -213,3 +244,16 @@ class DebugRenderer:
 
             if len(points) >= 3:
                 self.draw('polygon', color, points, width=2)
+
+    def draw_shape(self, points, shape_type, color):
+        minimum = 2 if shape_type == 'path' else 3
+
+        if len(points) < minimum:
+            return
+
+        screen_points = [self.world_to_screen(p) for p in points]
+
+        if shape_type == 'path':
+            self.draw('lines', color, False, screen_points, width=2)
+        else:
+            self.draw('polygon', color, screen_points, width=2)

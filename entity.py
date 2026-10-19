@@ -70,7 +70,6 @@ class Entity:
         if self.attack_timer > 0:
             self.attack_timer = max(0, self.attack_timer - dt)
 
-    #- TODO(core): Improve circle collision sliding along angled walls
     def collision_with_obstacle(self, candidate, obstacle):
         if isinstance(obstacle, Obstacle):
             center, radius = self.get_collision_circle(candidate)
@@ -126,16 +125,20 @@ class Entity:
 
         delta = direction * speed * dt  # на сколько сдвинемся за 1 кадр
 
-        new_x = self.clamp(
-            self.position.x + delta.x,
-            bounds.left,
-            bounds.right - self.image.get_width()
-        )
-        new_y = self.clamp(
-            self.position.y + delta.y,
-            bounds.top,
-            bounds.bottom - self.image.get_height()
-        )
+        new_x = self.position.x + delta.x
+        new_y = self.position.y + delta.y
+
+        if bounds is not None:
+            new_x = self.clamp(
+                self.position.x + delta.x,
+                bounds.left,
+                bounds.right - self.image.get_width()
+            )
+            new_y = self.clamp(
+                self.position.y + delta.y,
+                bounds.top,
+                bounds.bottom - self.image.get_height()
+            )
 
         candidate = self.get_candidate(new_x, 'x')
 
@@ -178,12 +181,27 @@ class Entity:
 
 #! NOTE: Maybe need to move
 class Spawner:
+    def __init__(self):
+        self.image_cache = {}
+
+    def get_image(self, name):
+        if name not in self.image_cache:
+            configure = UNITS[name]
+
+            self.image_cache[name] = resize_image(
+                configure['path'],
+                int(configure['height'])
+            )
+
+        return self.image_cache[name]
+
+
     def spawn_creature(self, entity_class, name, pos, **kwargs):
         x, y = pos
         configure = UNITS[name]
         unit_type = configure['unit_type']
 
-        image = resize_image(configure['path'], int(configure['height']))
+        image = self.get_image(name)
 
         stats = self.build_stats(name, unit_type, kwargs)
 

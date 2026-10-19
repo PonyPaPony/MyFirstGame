@@ -1,5 +1,5 @@
 from player import Player
-# from enemy import Enemy
+from NPC import AIforNPC
 from world_spawn import WorldSpawn
 from game_utils import WorldTime
 from units import Units
@@ -81,23 +81,41 @@ class WorldInit:
 
         self.core = Core()
         self.world_time = WorldTime()
+        self.world_time.set_time(1250)
+        self.last_hour = self.world_time.get_hour()
+
         self.world_rules = WorldRules(self.world_time)
         self.units = Units()
         self.world_spawn = WorldSpawn(self.units)
+        self.npc_ai = AIforNPC(self.world_spawn)
 
         self.core.register_units(self.units)
         self.player_init()
+        self.npc_init()
         self.world_update()
         self.camps = self.core.connect(self.world_rules)
+
+        self.npc_ai.update_npc_states(self.world_time.get_hour())
 
 
     def world_update(self):
         self.image, self.pos, self.objects = self.core.update(self.world_spawn)
 
+    def time_update(self):
+        current_hour = self.world_time.get_hour()
+        if current_hour != self.last_hour:
+            self.npc_ai.update_npc_states(current_hour)
+            self.last_hour = current_hour
+
     def tick(self, dt, camera_rect):
         self.world_time.update(dt)
+        self.time_update()
         self.world_rules.update()
-        self.world_spawn.update(camera_rect)
+        self.npc_ai.update(camera_rect, self.core.current_space, dt)
+        self.world_spawn.update(camera_rect, self.core.current_space)
 
     def player_init(self):
         self.world_spawn.spawn_player(Player, self.core.player_name, self.core.player_position, speed=50)
+
+    def npc_init(self): #- TODO(important): need to find "способ" fix next, trouble, NPC not react to time changes, 'cause i don't update time =_=
+        self.world_spawn.register_entity(self.core.current_location, 'npc')
